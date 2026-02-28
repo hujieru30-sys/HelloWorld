@@ -4,17 +4,18 @@ from transformers import pipeline
 from PIL import Image
 
 # function part
-def ageClassifier():
+def ageClassifier(imgfilename, modelName):
 # Load the age classification pipeline
 # The code below should be placed in the main part of the program
   age_classifier = pipeline("image-classification",
                             model="nateraw/vit-age-classifier")
 
-  image_name = "middleagedMan.jpg"
+  image_name = imgfilename
   image_name = Image.open(image_name).convert("RGB")
 
 # Classify age
   age_predictions = age_classifier(image_name)
+  return age_predictions
 
 def main():
  # Streamlit UI
@@ -31,6 +32,7 @@ def main():
   st.write(f"Age range: {age_predictions[0]['label']}")
 
   st.write("Done")
+  
 if __name__ == "__main__":
     main()
 
