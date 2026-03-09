@@ -1,10 +1,15 @@
 # Program title: Storytelling App
 
+# install required packages
+!pip install streamlit transformers torch soundfile pillow
+
 # import part
 import streamlit as st
 from transformers import pipeline
+import soundfile as sf
+import os
+import tempfile
 
-# function part
 # img2text
 def img2text(url):
     image_to_text_model = pipeline("image-to-text", model="Salesforce/blip-image-captioning-base")
@@ -18,49 +23,41 @@ def text2story(text):
     return story_text
 
 # text2audio
-def text2audio(story_text):
+def text2audio(story_text, output_filename="story.wav"):
     pipe = pipeline("text-to-audio", model="Matthijs/mms-tts-eng")
     audio_data = pipe(story_text)
     return audio_data
+    # save audio
+    sf.write(output_filename, audio_data["audio"], samplerate=audio_data["sampling_rate"])
+        return output_filename
 
-
+# function part
 def main():
-    st.set_page_config(page_title="Your Image to Audio Story", page_icon="🦜")
-    st.header("Turn Your Image to Audio Story")
-    uploaded_file = st.file_uploader("Select an Image...")
-
-    if uploaded_file is not None:
-        print(uploaded_file)
-        bytes_data = uploaded_file.getvalue()
-        with open(uploaded_file.name, "wb") as file:
-            file.write(bytes_data)
-        st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
-
-
-        #Stage 1: Image to Text
-        st.text('Processing img2text...')
-        scenario = img2text(uploaded_file.name)
-        st.write(scenario)
-
-        #Stage 2: Text to Story
-        st.text('Generating a story...')
-        story = text2story(scenario)
-        st.write(story)
-
-        #Stage 3: Story to Audio data
-        st.text('Generating audio data...')
-        audio_data =text2audio(story)
-
-        # Play button
-        if st.button("Play Audio"):
-            # Get the audio array and sample rate
-            audio_array = audio_data["audio"]
-            sample_rate = audio_data["sampling_rate"]
-
-            # Play audio directly using Streamlit
-            st.audio(audio_array,
-                     sample_rate=sample_rate)
-
+    print("=== 图片讲故事应用 ===")
+    filename = input("请输入图像文件名（图像需在当前目录）：").strip()
+    if not os.path.exists(filename):
+        print("文件不存在！")
+        return
+    print("\n1. 分析图像...")
+    caption = img2text(filename)
+    if not caption:
+        return
+    print(f"图像描述：{caption}")
+    
+    print("\n2. 生成故事...")
+    story = text2story(caption, max_words=100)
+    if not story:
+        return
+    print(f"\n故事：\n{story}")
+    print(f"字数：{len(story.split())}")
+    
+    print("\n3. 合成语音...")
+    audio_file = text2audio(story, output_filename="story.wav")
+    if audio_file:
+        print(f"音频已保存为 {audio_file}")
+        # 可选播放（需要额外库）
+        # import playsound
+        # playsound.playsound(audio_file)
 
 if __name__ == "__main__":
     main()
