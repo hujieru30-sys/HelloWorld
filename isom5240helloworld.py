@@ -3,7 +3,6 @@
 # import part
 import streamlit as st
 from transformers import pipeline
-import soundfile as sf
 import os
 import tempfile
 
