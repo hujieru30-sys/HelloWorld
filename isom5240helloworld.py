@@ -1,43 +1,24 @@
-# import part
-from transformers import pipeline
-from PIL import Image
 import streamlit as st
+from PIL import Image
+import time
 
-# function part
-def ageClassifier(imgFilename, modelName):
-    # Load the age classification pipeline
-    # The code below should be placed in the main part of the program
-    age_classifier = pipeline("image-classification", 
-                              model=modelName)
-    
-    image_name = imgFilename
-    image_name = Image.open(image_name).convert("RGB")
-    
-    # Classify age
-    age_predictions = age_classifier(image_name)
+# App title
+st.title("Streamlit Demo on Hugging Face")
 
-    return age_predictions
+# Write some text
+st.write("Welcome to a demo app showcasing basic Streamlit components!")
 
-def output_msg(age_predictions):
-    st.write(age_predictions)
-    age_predictions = sorted(age_predictions, key=lambda x: x['score'], reverse=True)
-    
-    # Display results
-    st.write("Predicted Age Range:")
-    st.write(f"Age range: {age_predictions[0]['label']}")
-    
-    st.write("Done")    
+# File uploader for image and audio
+uploaded_image = st.file_uploader("Upload an image",
+                                  type=["jpg", "jpeg", "png"])
 
-def main():
-    # Streamlit UI
-    st.header("Title: Age Classification using ViT")
-    
-#    age_predictions = ageClassifier("middleagedMan.jpg",
-#                                   "prithivMLmods/Age-Classification-SigLIP2")
-    age_predictions = ageClassifier("middleagedMan.jpg",
-                                   "akashmaggon/vit-base-age-classification")
-    output_msg(age_predictions)
+# Display image with spinner
+if uploaded_image is not None:
+    with st.spinner("Loading image..."):
+        time.sleep(1)  # Simulate a delay
+        image = Image.open(uploaded_image)
+        st.image(image, caption="Uploaded Image", use_column_width=True)
 
-# main part
-if __name__ == "__main__":
-    main()
+# Button interaction
+if st.button("Click Me"):
+    st.write("🎉 You clicked the button!")
