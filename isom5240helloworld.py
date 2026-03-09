@@ -1,109 +1,76 @@
 # Program title: Storytelling App
 
+# install required packages
+!pip install streamlit transformers torch soundfile pillow
+
 # import part
 import streamlit as st
 from transformers import pipeline
+import soundfile as sf
 import os
 import tempfile
 
 # img2text
-def img2text(image_path):
-    """
-    使用BLIP模型将图像转换为文字描述
-    """
-    try:
-        # 加载模型（每次调用都会重新加载）
-        image_to_text = pipeline(
-            "image-to-text",
-            model="Salesforce/blip-image-captioning-base"
-        )
-        result = image_to_text(image_path)
-        return result[0]["generated_text"]
-    except Exception as e:
-        st.error(f"图像描述生成失败：{e}")
-        return None
+def img2text(url):
+    image_to_text_model = pipeline("image-to-text", model="Salesforce/blip-image-captioning-base")
+    text = image_to_text_model(url)[0]["generated_text"]
+    return text
 
-# ============================================================
-# 故事生成功能（控制字数不超过100词）
-# ============================================================
-def text2story(caption, max_words=100):
-    """
-    基于图像描述生成儿童故事，并控制字数
-    """
-    try:
-        # 加载故事生成模型
-        generator = pipeline(
-            "text-generation",
-            model="pranavpsv/genre-story-generator-v2"
-        )
-        # 估算最大token数（英文约1.3 token/词）
-        max_tokens = int(max_words * 1.3)
-        # 生成故事
-        result = generator(
-            caption,
-            max_new_tokens=max_tokens,
-            do_sample=True,
-            temperature=0.8,
-            top_p=0.9
-        )
-        story = result[0]['generated_text']
-        
-        # 如果故事仍然超过100词，进行截断
-        words = story.split()
-        if len(words) > max_words:
-            story = ' '.join(words[:max_words]) + '...'
-        
-        return story
-    except Exception as e:
-        st.error(f"故事生成失败：{e}")
-        return None
+# text2story
+def text2story(text):
+    pipe = pipeline("text-generation", model="pranavpsv/genre-story-generator-v2")
+    story_text = pipe(text)[0]['generated_text']
+    return story_text
 
-# ============================================================
-# 文本转语音功能（保存为WAV文件）
-# ============================================================
-def text2audio(text, output_filename="story.wav"):
-    """
-    将文本转换为语音，并保存为WAV文件
-    """
-    try:
-        # 加载TTS模型
-        tts = pipeline("text-to-audio", model="Matthijs/mms-tts-eng")
-        audio_data = tts(text)
-        
-        # 保存音频文件
-        sf.write(output_filename, audio_data["audio"], samplerate=audio_data["sampling_rate"])
+# text2audio
+def text2audio(story_text, output_filename="story.wav"):
+    pipe = pipeline("text-to-audio", model="Matthijs/mms-tts-eng")
+    audio_data = pipe(story_text)
+    return audio_data
+    # save audio
+    sf.write(output_filename, audio_data["audio"], samplerate=audio_data["sampling_rate"])
         return output_filename
-    except Exception as e:
-        st.error(f"语音合成失败：{e}")
-        return None
 
 # function part
 def main():
-    print("=== 图片讲故事应用 ===")
-    filename = input("请输入图像文件名（图像需在当前目录）：").strip()
-    if not os.path.exists(filename):
-        print("文件不存在！")
-        return
-    print("\n1. 分析图像...")
-    caption = img2text(filename)
-    if not caption:
-        return
-    print(f"图像描述：{caption}")
-    
-    print("\n2. 生成故事...")
-    story = text2story(caption, max_words=100)
-    if not story:
-        return
-    print(f"\n故事：\n{story}")
-    print(f"字数：{len(story.split())}")
-    
-    print("\n3. 合成语音...")
-    audio_file = text2audio(story, output_filename="story.wav")
-    if audio_file:
-        print(f"音频已保存为 {audio_file}")
-        # 可选播放（需要额外库）
-        # import playsound
-        # playsound.playsound(audio_file)
+    st.set_page_config(page_title="Your Image to Audio Story", page_icon="🦜")
+    st.header("Turn Your Image to Audio Story")
+    uploaded_file = st.file_uploader("Select an Image...", type=["jpg", "jpeg", "png"])
+
+    if uploaded_file is not None:
+        print(uploaded_file)
+        bytes_data = uploaded_file.getvalue()
+        with open(uploaded_file.name, "wb") as file:
+            file.write(bytes_data)
+        
+        # show image
+        st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
+
+        #Stage 1: Image to Text
+        st.text('Processing img2text...')
+        scenario = img2text(uploaded_file.name)
+        st.write(scenario)
+
+        #Stage 2: Text to Story
+        st.text('Generating a story...')
+        story = text2story(scenario)
+        st.write(story)
+
+        #Stage 3: Story to Audio data
+        st.text('Generating audio data...')
+        audio_data =text2audio(story)
+        st.success(f"Audio saved as {audio_file}")
+
+        # Play button
+        if st.button("Play Audio"):
+            # Get the audio array and sample rate
+            audio_array = audio_data["audio"]
+            sample_rate = audio_data["sampling_rate"]
+
+            # Play audio directly using Streamlit
+            st.audio(audio_array,
+                     sample_rate=sample_rate)
+
 
 if __name__ == "__main__":
     main()
