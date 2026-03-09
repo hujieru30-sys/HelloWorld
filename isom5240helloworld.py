@@ -1,8 +1,5 @@
 # Program title: Storytelling App
 
-# install required packages
-!pip install streamlit transformers torch soundfile pillow
-
 # import part
 import streamlit as st
 from transformers import pipeline
